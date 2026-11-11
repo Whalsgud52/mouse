@@ -362,6 +362,85 @@ let lastAttempt = 0;
 let lastProcessed = 0;
 let fpsSamples = [];
 
+ // ========================================
+ // Windows PC 통신 기능
+ // ========================================
+
+let pcSocket = null;
+let pcPaired = false;
+
+// 팀원 C가 만든 서버 주소를 나중에 입력
+const PC_SERVER_URL = "";
+
+// PC 연결
+function connectPC() {
+    if (!PC_SERVER_URL) {
+        console.log("PC 서버 주소가 설정되지 않았습니다.");
+        return;
+    }
+
+    pcSocket = new WebSocket(PC_SERVER_URL);
+
+    pcSocket.onopen = () => {
+        console.log("PC 서버 연결 성공");
+        // 서버에서 인증을 사용하는 경우
+        // 인증 완료 후 pcPaired를 true로 변경해야 함
+    };
+
+    pcSocket.onmessage = (event) => {
+        try {
+            const data = JSON.parse(event.data);
+
+            if (data.type === "paired" && data.ok === true) {
+                pcPaired = true;
+                console.log("PC 연결 인증 완료");
+            }
+        } catch (error) {
+            console.error("서버 응답 오류:", error);
+        }
+    };
+
+    pcSocket.onclose = () => {
+        pcPaired = false;
+        console.log("PC 연결 종료");
+    };
+
+    pcSocket.onerror = (error) => {
+        console.error("PC 연결 오류:", error);
+    };
+}
+
+// 이동 데이터 전송
+function sendMouseMove(dx, dy) {
+    if (
+        !pcSocket ||
+        pcSocket.readyState !== WebSocket.OPEN ||
+        !pcPaired
+    ) {
+        return;
+    }
+
+    if (!Number.isFinite(dx) || !Number.isFinite(dy)) {
+        return;
+    }
+
+    if (dx === 0 && dy === 0) {
+        return;
+    }
+
+    const data = {
+        type: "move",
+        dx: dx,
+        dy: dy,
+        timestamp: Date.now()
+    };
+
+    pcSocket.send(JSON.stringify(data));
+}
+
+connectPC();
+
+
 // ========================================
 // 8. 중앙값 계산
 // ========================================
@@ -753,8 +832,8 @@ function trackMotion(timestamp) {
       // 위쪽: dy 음수
       // 아래쪽: dy 양수
 
-      const corrected =
-        correction(rawDx, rawDy);
+      const corrected = correction(rawDx, rawDy);  sendMouseMove(corrected.dx, corrected.dy);
+
 
       rawMovementText.textContent =
         `원본 dx: ${rawDx.toFixed(2)} | ` +
