@@ -2,17 +2,16 @@
 const video = document.getElementById("camera");
 const startBtn = document.getElementById("startBtn");
 const statusText = document.getElementById("status");
-const $ = (id) => document.getElementById(id);
 
 // ========================================
-// 1. 개발용 화면
+// 1. 개발용 화면 생성
 // ========================================
 
 const panel = document.createElement("section");
 panel.id = "trackingPanel";
 
 panel.innerHTML = `
-  <h3>전면 카메라 이동 추적</h3>
+  <h3>전면 카메라 이동 추적 (정확도 개선)</h3>
 
   <p id="opencvStatus">OpenCV 로딩 중...</p>
   <p id="points">
@@ -26,38 +25,6 @@ panel.innerHTML = `
   <p id="movement">
     보정 dx: 0.00 | dy: 0.00
   </p>
-
-  <hr>
-
-  <h3>기울기 오작동 방지</h3>
-
-  <button id="enableMotion" type="button">
-    기울기 센서 활성화
-  </button>
-
-  <p id="motionStatus">
-    센서 사용 전 (회전 보정 꺼짐)
-  </p>
-
-  <p id="rotationValue">회전 속도: --</p>
-
-  <p id="guardStatus">
-    커서 이동: 정상 (회전 감지 비활성)
-  </p>
-
-  <label for="rotationSlider">
-    회전 차단 기준:
-    <span id="rotationSetting">10</span> °/초
-  </label>
-
-  <input
-    id="rotationSlider"
-    type="range"
-    min="2"
-    max="30"
-    step="1"
-    value="10"
-  >
 
   <hr>
 
@@ -82,41 +49,20 @@ panel.innerHTML = `
   <label for="deadzoneSlider">
     데드존: <span id="deadzoneValue">0.12</span>
   </label>
-
-  <input
-    id="deadzoneSlider"
-    type="range"
-    min="0"
-    max="1"
-    step="0.02"
-    value="0.12"
-  >
+  <input id="deadzoneSlider" type="range"
+    min="0" max="1" step="0.02" value="0.12">
 
   <label for="sensitivitySlider">
     감도: <span id="sensitivityValue">3.0</span>배
   </label>
-
-  <input
-    id="sensitivitySlider"
-    type="range"
-    min="0.5"
-    max="10"
-    step="0.5"
-    value="3"
-  >
+  <input id="sensitivitySlider" type="range"
+    min="0.5" max="10" step="0.5" value="3">
 
   <label for="smoothingSlider">
     스무딩: <span id="smoothingValue">25</span>%
   </label>
-
-  <input
-    id="smoothingSlider"
-    type="range"
-    min="0"
-    max="85"
-    step="5"
-    value="25"
-  >
+  <input id="smoothingSlider" type="range"
+    min="0" max="85" step="5" value="25">
 `;
 
 video.before(panel);
@@ -138,7 +84,7 @@ extraStyle.textContent = `
     margin-top: 14px;
   }
 
-  #trackingPanel input[type="range"] {
+  #trackingPanel input[type=range] {
     display: block;
     width: 90%;
     margin: 10px auto 20px;
@@ -151,18 +97,9 @@ extraStyle.textContent = `
     color: #2563eb;
   }
 
-  #rawMovement,
-  #points,
-  #fpsText,
-  #rotationValue {
+  #rawMovement, #points, #fpsText {
     font-size: 14px;
     color: #555;
-  }
-
-  #motionStatus,
-  #guardStatus {
-    font-size: 14px;
-    font-weight: bold;
   }
 
   #virtualArea {
@@ -195,8 +132,19 @@ extraStyle.textContent = `
 document.head.appendChild(extraStyle);
 
 // ========================================
-// 3. 설정값과 가상 커서
+// 3. 화면 요소 및 설정 변수
 // ========================================
+
+const $ = (id) => document.getElementById(id);
+
+const opencvStatus = $("opencvStatus");
+const pointsText = $("points");
+const fpsText = $("fpsText");
+const rawMovementText = $("rawMovement");
+const movementText = $("movement");
+const totalMovementText = $("totalMovement");
+const virtualArea = $("virtualArea");
+const virtualCursor = $("virtualCursor");
 
 let deadzone = 0.12;
 let sensitivity = 3;
@@ -211,27 +159,53 @@ let totalY = 0;
 let cursorX = 0;
 let cursorY = 0;
 
-function drawCursor() {
-  const area = $("virtualArea");
-  const dot = $("virtualCursor");
+// ========================================
+// 4. 슬라이더 설정
+// ========================================
 
+$("deadzoneSlider").addEventListener("input", (e) => {
+  deadzone = Number(e.target.value);
+
+  $("deadzoneValue").textContent =
+    deadzone.toFixed(2);
+});
+
+$("sensitivitySlider").addEventListener("input", (e) => {
+  sensitivity = Number(e.target.value);
+
+  $("sensitivityValue").textContent =
+    sensitivity.toFixed(1);
+});
+
+$("smoothingSlider").addEventListener("input", (e) => {
+  smoothing = Number(e.target.value) / 100;
+
+  $("smoothingValue").textContent =
+    (smoothing * 100).toFixed(0);
+});
+
+// ========================================
+// 5. 가상 커서 및 누적 이동량
+// ========================================
+
+function drawCursor() {
   const maxX = Math.max(
     0,
-    area.clientWidth - dot.offsetWidth
+    virtualArea.clientWidth - virtualCursor.offsetWidth
   );
 
   const maxY = Math.max(
     0,
-    area.clientHeight - dot.offsetHeight
+    virtualArea.clientHeight - virtualCursor.offsetHeight
   );
 
-  cursorX = Math.max(0, Math.min(maxX, cursorX));
-  cursorY = Math.max(0, Math.min(maxY, cursorY));
+  cursorX = Math.min(maxX, Math.max(0, cursorX));
+  cursorY = Math.min(maxY, Math.max(0, cursorY));
 
-  dot.style.transform =
+  virtualCursor.style.transform =
     `translate(${cursorX}px, ${cursorY}px)`;
 
-  $("totalMovement").textContent =
+  totalMovementText.textContent =
     `누적 X: ${totalX.toFixed(2)} | ` +
     `Y: ${totalY.toFixed(2)}`;
 }
@@ -244,328 +218,40 @@ function resetCursor() {
   smoothDy = 0;
 
   cursorX =
-    ($("virtualArea").clientWidth -
-      $("virtualCursor").offsetWidth) / 2;
+    (virtualArea.clientWidth -
+      virtualCursor.offsetWidth) / 2;
 
   cursorY =
-    ($("virtualArea").clientHeight -
-      $("virtualCursor").offsetHeight) / 2;
+    (virtualArea.clientHeight -
+      virtualCursor.offsetHeight) / 2;
 
+  // 이전 프레임을 초기화하여 오차 방지
   if (previousGray) {
     previousGray.delete();
     previousGray = null;
   }
 
-  $("rawMovement").textContent =
+  rawMovementText.textContent =
     "원본 dx: 0.00 | dy: 0.00";
 
-  $("movement").textContent =
+  movementText.textContent =
     "보정 dx: 0.00 | dy: 0.00";
 
   drawCursor();
 }
 
-$("resetCursor").addEventListener(
-  "click",
-  resetCursor
-);
-
+$("resetCursor").addEventListener("click", resetCursor);
 window.addEventListener("resize", drawCursor);
 
 // ========================================
-// 4. 기존 감도 보정 설정
-// ========================================
-
-$("deadzoneSlider").addEventListener(
-  "input",
-  (e) => {
-    deadzone = Number(e.target.value);
-
-    $("deadzoneValue").textContent =
-      deadzone.toFixed(2);
-  }
-);
-
-$("sensitivitySlider").addEventListener(
-  "input",
-  (e) => {
-    sensitivity = Number(e.target.value);
-
-    $("sensitivityValue").textContent =
-      sensitivity.toFixed(1);
-  }
-);
-
-$("smoothingSlider").addEventListener(
-  "input",
-  (e) => {
-    smoothing = Number(e.target.value) / 100;
-
-    $("smoothingValue").textContent =
-      String(Math.round(smoothing * 100));
-  }
-);
-
-// ========================================
-// 5. 자이로스코프 기반 회전 감지
-// ========================================
-
-let motionEnabled = false;
-let motionReceived = false;
-
-let lastMotionAt = -Infinity;
-let rotationSpeed = 0;
-
-// 회전 차단 기준
-let rotationThreshold = 10;
-
-// 회전 이후 250ms 동안 추가 차단
-let blockUntil = 0;
-const BLOCK_HOLD_MS = 250;
-
-// 회전 기준값 슬라이더
-$("rotationSlider").addEventListener(
-  "input",
-  (e) => {
-    rotationThreshold = Number(e.target.value);
-
-    $("rotationSetting").textContent =
-      String(rotationThreshold);
-  }
-);
-
-// 자이로스코프 센서 데이터 수신
-function onDeviceMotion(event) {
-  const r = event.rotationRate;
-
-  if (!r) return;
-
-  const values = [
-    r.alpha,
-    r.beta,
-    r.gamma
-  ].filter(Number.isFinite);
-
-  if (values.length === 0) return;
-
-  motionReceived = true;
-
-  lastMotionAt = performance.now();
-
-  rotationSpeed = Math.hypot(...values);
-
-  // 일정 속도 이상 회전하면 커서 차단
-  if (rotationSpeed >= rotationThreshold) {
-    blockUntil =
-      lastMotionAt + BLOCK_HOLD_MS;
-  }
-}
-
-// ========================================
-// 6. 센서 권한 요청
-// ========================================
-
-$("enableMotion").addEventListener(
-  "click",
-  async () => {
-    const button = $("enableMotion");
-
-    if (motionEnabled) return;
-
-    if (
-      typeof window.DeviceMotionEvent ===
-      "undefined"
-    ) {
-      $("motionStatus").textContent =
-        "동작 센서 API를 지원하지 않음";
-
-      return;
-    }
-
-    button.disabled = true;
-
-    try {
-      // iPhone Safari 센서 권한 요청
-      if (
-        typeof DeviceMotionEvent.requestPermission ===
-        "function"
-      ) {
-        const permission =
-          await DeviceMotionEvent.requestPermission();
-
-        if (permission !== "granted") {
-          $("motionStatus").textContent =
-            "센서 권한 거부됨";
-
-          button.disabled = false;
-          return;
-        }
-      }
-
-      window.addEventListener(
-        "devicemotion",
-        onDeviceMotion
-      );
-
-      motionEnabled = true;
-
-      button.textContent =
-        "기울기 센서 활성화됨";
-
-      $("motionStatus").textContent =
-        "센서 연결됨, 회전 데이터 수신 대기...";
-
-    } catch (error) {
-      $("motionStatus").textContent =
-        `센서 시작 실패: ${error.message}`;
-
-      button.disabled = false;
-
-      console.error(error);
-    }
-  }
-);
-
-// ========================================
-// 7. 회전 차단 상태 계산
-// ========================================
-
-function rotationBlocked() {
-  const fresh =
-    performance.now() - lastMotionAt < 1000;
-
-  return (
-    motionEnabled &&
-    motionReceived &&
-    fresh &&
-    performance.now() < blockUntil
-  );
-}
-
-// 상태 표시
-function updateRotationUI(blocked) {
-  if (!motionEnabled) {
-    $("guardStatus").textContent =
-      "커서 이동: 정상 (회전 감지 비활성)";
-
-    return;
-  }
-
-  if (
-    !motionReceived ||
-    performance.now() - lastMotionAt >= 1000
-  ) {
-    $("motionStatus").textContent =
-      "센서 데이터 수신 대기 / 중단";
-
-    $("rotationValue").textContent =
-      "회전 속도: --";
-
-    $("guardStatus").textContent =
-      "커서 이동: 정상 (센서 보호 미적용)";
-
-    return;
-  }
-
-  $("motionStatus").textContent =
-    "기울기 센서 정상 수신 중";
-
-  $("rotationValue").textContent =
-    `회전 속도: ${rotationSpeed.toFixed(1)} °/초`;
-
-  $("guardStatus").textContent = blocked
-    ? "회전 감지! 커서 이동 일시 차단"
-    : "커서 이동: 정상";
-
-  $("guardStatus").style.color = blocked
-    ? "#dc2626"
-    : "#15803d";
-}
-
-// ========================================
-// 8. Windows PC 전송 준비
-// ========================================
-
-// 팀원 C의 서버가 준비되면 주소 입력
-const PC_SERVER_URL = "";
-
-let pcSocket = null;
-let pcPaired = false;
-
-function connectPC() {
-  if (!PC_SERVER_URL) return;
-
-  pcSocket = new WebSocket(PC_SERVER_URL);
-
-  pcSocket.onopen = () => {
-    console.log("PC 연결됨. 인증 확인 대기");
-  };
-
-  pcSocket.onmessage = (event) => {
-    try {
-      const msg = JSON.parse(event.data);
-
-      if (
-        msg.type === "paired" &&
-        msg.ok === true
-      ) {
-        pcPaired = true;
-      }
-
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
-  pcSocket.onclose = () => {
-    pcPaired = false;
-  };
-
-  pcSocket.onerror = (error) => {
-    console.error("PC 연결 오류", error);
-  };
-}
-
-// 이동 데이터 전송
-function sendMouseMove(dx, dy) {
-  if (
-    !pcSocket ||
-    pcSocket.readyState !== WebSocket.OPEN ||
-    !pcPaired
-  ) {
-    return;
-  }
-
-  if (
-    !Number.isFinite(dx) ||
-    !Number.isFinite(dy)
-  ) {
-    return;
-  }
-
-  if (dx === 0 && dy === 0) return;
-
-  pcSocket.send(
-    JSON.stringify({
-      type: "move",
-      dx,
-      dy,
-      timestamp: Date.now()
-    })
-  );
-}
-
-connectPC();
-
-// ========================================
-// 9. OpenCV.js 초기화
+// 6. OpenCV 초기화
 // ========================================
 
 let cvLib = null;
 let promiseAttached = false;
 let cvPollTimer = null;
 
-function setOpenCVReady(candidate) {
+function setReady(candidate) {
   if (
     !candidate ||
     typeof candidate.Mat !== "function"
@@ -575,10 +261,8 @@ function setOpenCVReady(candidate) {
 
   cvLib = candidate;
 
-  $("opencvStatus").textContent =
-    "OpenCV 준비 완료";
-
-  $("opencvStatus").style.color = "green";
+  opencvStatus.textContent = "OpenCV 준비 완료";
+  opencvStatus.style.color = "green";
 
   if (cvPollTimer !== null) {
     clearInterval(cvPollTimer);
@@ -593,7 +277,7 @@ function checkOpenCV() {
 
   const candidate = window.cv;
 
-  if (setOpenCVReady(candidate)) return;
+  if (setReady(candidate)) return;
 
   if (
     candidate &&
@@ -603,13 +287,12 @@ function checkOpenCV() {
     promiseAttached = true;
 
     candidate.then((module) => {
-      if (!setOpenCVReady(module)) {
-        $("opencvStatus").textContent =
+      if (!setReady(module)) {
+        opencvStatus.textContent =
           "OpenCV 초기화 실패";
       }
-
     }).catch((error) => {
-      $("opencvStatus").textContent =
+      opencvStatus.textContent =
         "OpenCV 초기화 오류";
 
       console.error(error);
@@ -621,8 +304,7 @@ window.Module = {
   onRuntimeInitialized: checkOpenCV
 };
 
-const library =
-  document.createElement("script");
+const library = document.createElement("script");
 
 library.src =
   "https://docs.opencv.org/4.x/opencv.js";
@@ -631,38 +313,37 @@ library.onload = () => {
   checkOpenCV();
 
   if (!cvLib) {
-    $("opencvStatus").textContent =
+    opencvStatus.textContent =
       "OpenCV 초기화 중...";
   }
 };
 
 library.onerror = () => {
-  $("opencvStatus").textContent =
+  opencvStatus.textContent =
     "OpenCV 다운로드 실패";
 
-  $("opencvStatus").style.color = "red";
+  opencvStatus.style.color = "red";
 };
 
 document.head.appendChild(library);
 
-cvPollTimer = setInterval(
-  checkOpenCV,
-  200
-);
+cvPollTimer = setInterval(checkOpenCV, 200);
 
 setTimeout(() => {
   if (!cvLib) {
-    clearInterval(cvPollTimer);
+    if (cvPollTimer !== null) {
+      clearInterval(cvPollTimer);
+    }
 
-    $("opencvStatus").textContent =
+    opencvStatus.textContent =
       "OpenCV 초기화 지연 또는 실패";
 
-    $("opencvStatus").style.color = "red";
+    opencvStatus.style.color = "red";
   }
 }, 60000);
 
 // ========================================
-// 10. 전면 카메라 설정
+// 7. 카메라 및 영상 분석 준비
 // ========================================
 
 const canvas = document.createElement("canvas");
@@ -679,49 +360,134 @@ let tracking = false;
 
 let lastAttempt = 0;
 let lastProcessed = 0;
+let fpsSamples = [];
 
-const fpsSamples = [];
+ // ========================================
+ // Windows PC 통신 기능
+ // ========================================
+
+let pcSocket = null;
+let pcPaired = false;
+
+// 팀원 C가 만든 서버 주소를 나중에 입력
+const PC_SERVER_URL = "";
+
+// PC 연결
+function connectPC() {
+    if (!PC_SERVER_URL) {
+        console.log("PC 서버 주소가 설정되지 않았습니다.");
+        return;
+    }
+
+    pcSocket = new WebSocket(PC_SERVER_URL);
+
+    pcSocket.onopen = () => {
+        console.log("PC 서버 연결 성공");
+        // 서버에서 인증을 사용하는 경우
+        // 인증 완료 후 pcPaired를 true로 변경해야 함
+    };
+
+    pcSocket.onmessage = (event) => {
+        try {
+            const data = JSON.parse(event.data);
+
+            if (data.type === "paired" && data.ok === true) {
+                pcPaired = true;
+                console.log("PC 연결 인증 완료");
+            }
+        } catch (error) {
+            console.error("서버 응답 오류:", error);
+        }
+    };
+
+    pcSocket.onclose = () => {
+        pcPaired = false;
+        console.log("PC 연결 종료");
+    };
+
+    pcSocket.onerror = (error) => {
+        console.error("PC 연결 오류:", error);
+    };
+}
+
+// 이동 데이터 전송
+function sendMouseMove(dx, dy) {
+    if (
+        !pcSocket ||
+        pcSocket.readyState !== WebSocket.OPEN ||
+        !pcPaired
+    ) {
+        return;
+    }
+
+    if (!Number.isFinite(dx) || !Number.isFinite(dy)) {
+        return;
+    }
+
+    if (dx === 0 && dy === 0) {
+        return;
+    }
+
+    const data = {
+        type: "move",
+        dx: dx,
+        dy: dy,
+        timestamp: Date.now()
+    };
+
+    pcSocket.send(JSON.stringify(data));
+}
+
+connectPC();
+
 
 // ========================================
-// 11. 중앙값 계산
+// 8. 중앙값 계산
 // ========================================
 
 function median(values) {
   if (!values.length) return 0;
 
-  const sorted = [...values].sort(
-    (a, b) => a - b
-  );
+  const sorted = [...values].sort((a, b) => a - b);
 
-  const m = Math.floor(sorted.length / 2);
+  const middle = Math.floor(sorted.length / 2);
 
-  return sorted.length % 2
-    ? sorted[m]
-    : (sorted[m - 1] + sorted[m]) / 2;
+  if (sorted.length % 2) {
+    return sorted[middle];
+  }
+
+  return (
+    sorted[middle - 1] + sorted[middle]
+  ) / 2;
 }
 
 // ========================================
-// 12. 이상값 필터링
+// 9. 이상 이동량 제거
 // ========================================
 
 function filterVectors(vectors) {
-  if (vectors.length < 6) return [];
+  if (vectors.length < 6) {
+    return [];
+  }
 
-  const cx = median(
+  // 특징점 이동량의 중앙값 계산
+  const centerDx = median(
     vectors.map((v) => v.dx)
   );
 
-  const cy = median(
+  const centerDy = median(
     vectors.map((v) => v.dy)
   );
 
+  // 중앙 이동량과의 거리 계산
   const distances = vectors.map((v) =>
     Math.hypot(
-      v.dx - cx,
-      v.dy - cy
+      v.dx - centerDx,
+      v.dy - centerDy
     )
   );
 
+  // MAD 기반 이상값 제거
   const mad = median(distances);
 
   const limit = Math.max(
@@ -731,41 +497,24 @@ function filterVectors(vectors) {
 
   return vectors.filter((v) =>
     Math.hypot(
-      v.dx - cx,
-      v.dy - cy
+      v.dx - centerDx,
+      v.dy - centerDy
     ) <= limit
   );
 }
 
 // ========================================
-// 13. 데드존 / 스무딩 / 감도
+// 10. 데드존 / 감도 / 스무딩
 // ========================================
 
-function correction(rawDx, rawDy, blocked) {
-
-  // 기울기 감지 시 커서 이동 차단
-  if (blocked) {
-    smoothDx = 0;
-    smoothDy = 0;
-
-    return {
-      dx: 0,
-      dy: 0
-    };
-  }
-
-  // 데드존 적용
+function correction(rawDx, rawDy) {
   const dx =
-    Math.abs(rawDx) < deadzone
-      ? 0
-      : rawDx;
+    Math.abs(rawDx) < deadzone ? 0 : rawDx;
 
   const dy =
-    Math.abs(rawDy) < deadzone
-      ? 0
-      : rawDy;
+    Math.abs(rawDy) < deadzone ? 0 : rawDy;
 
-  // 스무딩 적용
+  // 스무딩
   smoothDx = dx === 0
     ? 0
     : smoothing * smoothDx +
@@ -776,7 +525,6 @@ function correction(rawDx, rawDy, blocked) {
     : smoothing * smoothDy +
       (1 - smoothing) * dy;
 
-  // 감도 적용
   return {
     dx: smoothDx * sensitivity,
     dy: smoothDy * sensitivity
@@ -784,7 +532,7 @@ function correction(rawDx, rawDy, blocked) {
 }
 
 // ========================================
-// 14. iPhone 전면 카메라 시작
+// 11. iPhone 전면 카메라 실행
 // ========================================
 
 async function startCamera() {
@@ -805,7 +553,6 @@ async function startCamera() {
       });
 
     video.srcObject = stream;
-
     await video.play();
 
     statusText.textContent =
@@ -815,16 +562,9 @@ async function startCamera() {
 
     startBtn.disabled = true;
 
-    if (previousGray) {
-      previousGray.delete();
-    }
-
-    previousGray = null;
-
     lastAttempt = 0;
     lastProcessed = 0;
-
-    fpsSamples.length = 0;
+    fpsSamples = [];
 
     tracking = true;
 
@@ -832,37 +572,28 @@ async function startCamera() {
 
   } catch (error) {
     statusText.textContent =
-      `카메라 실행 실패: ${error.message}`;
+      "카메라 실행 실패: " + error.message;
 
     console.error(error);
   }
 }
 
-startBtn.addEventListener(
-  "click",
-  startCamera
-);
+startBtn.addEventListener("click", startCamera);
 
-// 화면 전환 시 초기화
-document.addEventListener(
-  "visibilitychange",
-  () => {
-    if (document.hidden && previousGray) {
-      previousGray.delete();
-      previousGray = null;
-    }
-
-    lastAttempt = 0;
-    lastProcessed = 0;
-
-    fpsSamples.length = 0;
-
-    blockUntil = 0;
+// 화면 전환 시 프레임 초기화
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden && previousGray) {
+    previousGray.delete();
+    previousGray = null;
   }
-);
+
+  lastAttempt = 0;
+  lastProcessed = 0;
+  fpsSamples = [];
+});
 
 // ========================================
-// 15. Optical Flow 분석
+// 12. Optical Flow 정확도 개선
 // ========================================
 
 function trackMotion(timestamp) {
@@ -870,7 +601,7 @@ function trackMotion(timestamp) {
 
   requestAnimationFrame(trackMotion);
 
-  // 최대 약 20FPS
+  // 최대 약 20FPS 분석
   if (
     timestamp - lastAttempt < 50 ||
     !cvLib ||
@@ -914,203 +645,221 @@ function trackMotion(timestamp) {
       cvLib.COLOR_RGBA2GRAY
     );
 
-    // 기울기 감지 확인
-    const blocked = rotationBlocked();
-
-    updateRotationUI(blocked);
-
     if (previousGray) {
-      let totalFeatures = 0;
-      let fbPassed = 0;
 
+      prevPts = new cvLib.Mat();
+      nextPts = new cvLib.Mat();
+      backPts = new cvLib.Mat();
+
+      forwardStatus = new cvLib.Mat();
+      forwardErr = new cvLib.Mat();
+
+      backStatus = new cvLib.Mat();
+      backErr = new cvLib.Mat();
+
+      mask = new cvLib.Mat();
+
+      // 특징점 탐색
+      cvLib.goodFeaturesToTrack(
+        previousGray,
+        prevPts,
+        120,
+        0.01,
+        6,
+        mask
+      );
+
+      const totalFeatures = prevPts.rows;
+
+      let fbPassed = 0;
       let vectors = [];
 
-      // 회전 중에는 Optical Flow 이동 추적 차단
-      if (!blocked) {
-        prevPts = new cvLib.Mat();
-        nextPts = new cvLib.Mat();
-        backPts = new cvLib.Mat();
+      if (totalFeatures > 0) {
 
-        forwardStatus = new cvLib.Mat();
-        forwardErr = new cvLib.Mat();
+        const winSize =
+          new cvLib.Size(21, 21);
 
-        backStatus = new cvLib.Mat();
-        backErr = new cvLib.Mat();
+        const criteria =
+          new cvLib.TermCriteria(
+            cvLib.TermCriteria_COUNT +
+            cvLib.TermCriteria_EPS,
+            25,
+            0.03
+          );
 
-        mask = new cvLib.Mat();
+        // -----------------------------
+        // A. 정방향 Optical Flow
+        // 이전 프레임 -> 현재 프레임
+        // -----------------------------
 
-        cvLib.goodFeaturesToTrack(
+        cvLib.calcOpticalFlowPyrLK(
           previousGray,
+          gray,
           prevPts,
-          120,
-          0.01,
-          6,
-          mask
+          nextPts,
+          forwardStatus,
+          forwardErr,
+          winSize,
+          3,
+          criteria
         );
 
-        totalFeatures = prevPts.rows;
+        // -----------------------------
+        // B. 역방향 Optical Flow
+        // 현재 프레임 -> 이전 프레임
+        // -----------------------------
 
-        if (totalFeatures > 0) {
+        cvLib.calcOpticalFlowPyrLK(
+          gray,
+          previousGray,
+          nextPts,
+          backPts,
+          backStatus,
+          backErr,
+          winSize,
+          3,
+          criteria
+        );
 
-          const win =
-            new cvLib.Size(21, 21);
+        // -----------------------------
+        // C. Forward-Backward 검증
+        // -----------------------------
 
-          const term =
-            new cvLib.TermCriteria(
-              cvLib.TermCriteria_COUNT +
-              cvLib.TermCriteria_EPS,
-              25,
-              0.03
+        for (let i = 0; i < totalFeatures; i++) {
+
+          // 양방향 추적 성공 여부
+          if (
+            forwardStatus.data[i] !== 1 ||
+            backStatus.data[i] !== 1
+          ) {
+            continue;
+          }
+
+          const x0 =
+            prevPts.data32F[2 * i];
+
+          const y0 =
+            prevPts.data32F[2 * i + 1];
+
+          const x1 =
+            nextPts.data32F[2 * i];
+
+          const y1 =
+            nextPts.data32F[2 * i + 1];
+
+          const xb =
+            backPts.data32F[2 * i];
+
+          const yb =
+            backPts.data32F[2 * i + 1];
+
+          if (
+            ![x0, y0, x1, y1, xb, yb]
+              .every(Number.isFinite)
+          ) {
+            continue;
+          }
+
+          // 현재 영상 범위를 벗어난 특징점 제외
+          if (
+            x1 < 0 ||
+            x1 >= canvas.width ||
+            y1 < 0 ||
+            y1 >= canvas.height
+          ) {
+            continue;
+          }
+
+          // 역방향 추적 후 원래 위치와 비교
+          const backError =
+            Math.hypot(
+              xb - x0,
+              yb - y0
             );
 
-          // 정방향 Optical Flow
-          cvLib.calcOpticalFlowPyrLK(
-            previousGray,
-            gray,
-            prevPts,
-            nextPts,
-            forwardStatus,
-            forwardErr,
-            win,
-            3,
-            term
-          );
-
-          // 역방향 Optical Flow
-          cvLib.calcOpticalFlowPyrLK(
-            gray,
-            previousGray,
-            nextPts,
-            backPts,
-            backStatus,
-            backErr,
-            win,
-            3,
-            term
-          );
-
-          // Forward-Backward 검증
-          for (
-            let i = 0;
-            i < totalFeatures;
-            i++
-          ) {
-            if (
-              forwardStatus.data[i] !== 1 ||
-              backStatus.data[i] !== 1
-            ) {
-              continue;
-            }
-
-            const x0 =
-              prevPts.data32F[2 * i];
-
-            const y0 =
-              prevPts.data32F[2 * i + 1];
-
-            const x1 =
-              nextPts.data32F[2 * i];
-
-            const y1 =
-              nextPts.data32F[2 * i + 1];
-
-            const xb =
-              backPts.data32F[2 * i];
-
-            const yb =
-              backPts.data32F[2 * i + 1];
-
-            if (
-              ![x0, y0, x1, y1, xb, yb]
-                .every(Number.isFinite)
-            ) {
-              continue;
-            }
-
-            if (
-              x1 < 0 ||
-              x1 >= canvas.width ||
-              y1 < 0 ||
-              y1 >= canvas.height
-            ) {
-              continue;
-            }
-
-            const backError =
-              Math.hypot(
-                xb - x0,
-                yb - y0
-              );
-
-            if (backError > 1.5) {
-              continue;
-            }
-
-            const dx = x1 - x0;
-            const dy = y1 - y0;
-
-            if (Math.hypot(dx, dy) > 35) {
-              continue;
-            }
-
-            fbPassed++;
-
-            vectors.push({ dx, dy });
+          // 1.5픽셀보다 큰 오차 제거
+          if (backError > 1.5) {
+            continue;
           }
-        }
 
-        vectors = filterVectors(vectors);
+          const dx = x1 - x0;
+          const dy = y1 - y0;
+
+          // 비정상적으로 큰 순간 이동 제거
+          if (Math.hypot(dx, dy) > 35) {
+            continue;
+          }
+
+          fbPassed++;
+
+          vectors.push({ dx, dy });
+        }
       }
 
-      // ==================================
-      // 16. 이동량 계산 및 회전 보정
-      // ==================================
+      // -----------------------------
+      // D. 이상 이동량 필터링
+      // -----------------------------
 
-      $("points").textContent = blocked
-        ? "회전 중: 특징점 추적 일시 차단"
-        : `특징점: ${totalFeatures} / ` +
-          `검증 통과: ${fbPassed} / ` +
-          `최종: ${vectors.length}`;
+      vectors = filterVectors(vectors);
 
-      // 전면 카메라 방향 유지
-      const rawDx = vectors.length >= 6
-        ? median(vectors.map((v) => v.dx))
-        : 0;
+      pointsText.textContent =
+        `특징점: ${totalFeatures} / ` +
+        `검증 통과: ${fbPassed} / ` +
+        `최종: ${vectors.length}`;
 
-      const rawDy = vectors.length >= 6
-        ? -median(vectors.map((v) => v.dy))
-        : 0;
+      // -----------------------------
+      // E. 이동량 계산
+      // -----------------------------
 
-      // 회전 보정 포함
-      const corrected =
-        correction(rawDx, rawDy, blocked);
+      let rawDx = 0;
+      let rawDy = 0;
 
-      $("rawMovement").textContent =
+      // 유효 특징점이 충분할 때만 계산
+      if (vectors.length >= 6) {
+
+        rawDx = median(
+          vectors.map((v) => v.dx)
+        );
+
+        rawDy = -median(
+          vectors.map((v) => v.dy)
+        );
+      }
+
+      // 전면 카메라 방향 보정 유지
+      // 오른쪽: dx 양수
+      // 왼쪽: dx 음수
+      // 위쪽: dy 음수
+      // 아래쪽: dy 양수
+
+      const corrected = correction(rawDx, rawDy);  sendMouseMove(corrected.dx, corrected.dy);
+
+
+      rawMovementText.textContent =
         `원본 dx: ${rawDx.toFixed(2)} | ` +
         `dy: ${rawDy.toFixed(2)}`;
 
-      $("movement").textContent =
+      movementText.textContent =
         `보정 dx: ${corrected.dx.toFixed(2)} | ` +
         `dy: ${corrected.dy.toFixed(2)}`;
 
-      // 누적 이동량
+      // -----------------------------
+      // F. 누적 이동량 및 가상 커서
+      // -----------------------------
+
       totalX += corrected.dx;
       totalY += corrected.dy;
 
-      // 가상 커서 이동
       cursorX += corrected.dx;
       cursorY += corrected.dy;
 
       drawCursor();
-
-      // Windows PC 전송
-      sendMouseMove(
-        corrected.dx,
-        corrected.dy
-      );
     }
 
-    // 이전 프레임 갱신
+    // -----------------------------
+    // G. 이전 프레임 갱신
+    // -----------------------------
+
     if (previousGray) {
       previousGray.delete();
     }
@@ -1118,9 +867,9 @@ function trackMotion(timestamp) {
     previousGray = gray;
     gray = null;
 
-    // ==================================
-    // 17. FPS 계산
-    // ==================================
+    // -----------------------------
+    // H. 실제 분석 FPS 계산
+    // -----------------------------
 
     const now = performance.now();
 
@@ -1134,25 +883,25 @@ function trackMotion(timestamp) {
           fpsSamples.shift();
         }
 
-        const avg =
+        const averageDt =
           fpsSamples.reduce(
-            (a, b) => a + b,
-            0
+            (a, b) => a + b, 0
           ) / fpsSamples.length;
 
-        $("fpsText").textContent =
+        fpsText.textContent =
           `실제 분석 FPS: ` +
-          `${(1000 / avg).toFixed(1)}`;
+          `${(1000 / averageDt).toFixed(1)}`;
       }
     }
 
     lastProcessed = now;
 
   } catch (error) {
+
     tracking = false;
 
     statusText.textContent =
-      `영상 분석 오류: ${error.message}`;
+      "영상 분석 오류: " + error.message;
 
     statusText.style.color = "red";
 
@@ -1160,11 +909,11 @@ function trackMotion(timestamp) {
 
     if (previousGray) {
       previousGray.delete();
+      previousGray = null;
     }
 
-    previousGray = null;
-
   } finally {
+
     // OpenCV 메모리 해제
     for (const mat of [
       src,
@@ -1185,5 +934,5 @@ function trackMotion(timestamp) {
   }
 }
 
-// 초기 커서 위치 설정
+// 처음 실행 시 가상 커서 초기화
 resetCursor();
