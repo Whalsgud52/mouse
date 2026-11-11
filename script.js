@@ -366,16 +366,23 @@ let fpsSamples = [];
  // Windows PC 통신 기능
  // ========================================
 
+
 let pcSocket = null;
 let pcPaired = false;
 
-// 팀원 C가 만든 서버 주소를 나중에 입력
-const PC_SERVER_URL = "";
+// Windows PC에서 테스트할 서버 주소
+const PC_SERVER_URL = prompt(
+    "PC 서버 WSS 주소를 입력하세요:",
+    "wss://"
+);
+
+// 인증 토큰 입력
+const PAIR_TOKEN = prompt("Windows 서버의 Pairing token을 입력하세요:");
 
 // PC 연결
 function connectPC() {
-    if (!PC_SERVER_URL) {
-        console.log("PC 서버 주소가 설정되지 않았습니다.");
+    if (!PAIR_TOKEN) {
+        console.log("인증 토큰이 입력되지 않았습니다.");
         return;
     }
 
@@ -383,17 +390,26 @@ function connectPC() {
 
     pcSocket.onopen = () => {
         console.log("PC 서버 연결 성공");
-        // 서버에서 인증을 사용하는 경우
-        // 인증 완료 후 pcPaired를 true로 변경해야 함
+
+        // Windows 서버에 인증 요청
+        pcSocket.send(JSON.stringify({
+            type: "pair",
+            token: PAIR_TOKEN
+        }));
     };
 
     pcSocket.onmessage = (event) => {
         try {
             const data = JSON.parse(event.data);
 
-            if (data.type === "paired" && data.ok === true) {
-                pcPaired = true;
-                console.log("PC 연결 인증 완료");
+            if (data.type === "paired") {
+                pcPaired = data.ok === true;
+
+                if (pcPaired) {
+                    console.log("PC 인증 성공");
+                } else {
+                    console.error("PC 인증 실패");
+                }
             }
         } catch (error) {
             console.error("서버 응답 오류:", error);
@@ -406,7 +422,7 @@ function connectPC() {
     };
 
     pcSocket.onerror = (error) => {
-        console.error("PC 연결 오류:", error);
+        console.error("WebSocket 연결 오류:", error);
     };
 }
 
@@ -428,17 +444,16 @@ function sendMouseMove(dx, dy) {
         return;
     }
 
-    const data = {
+    pcSocket.send(JSON.stringify({
         type: "move",
         dx: dx,
         dy: dy,
         timestamp: Date.now()
-    };
-
-    pcSocket.send(JSON.stringify(data));
+    }));
 }
 
 connectPC();
+
 
 
 // ========================================
