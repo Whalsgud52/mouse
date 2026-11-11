@@ -314,7 +314,7 @@ function trackMotion(timestamp) {
             }
 
             // 카메라 이동 방향을 추정
-            const dx = -median(dxList);
+            const dx = median(dxList);
             const dy = -median(dyList);
 
             // 화면에 이동량 표시
