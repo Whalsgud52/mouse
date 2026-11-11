@@ -52,11 +52,19 @@ panel.innerHTML = `
   <input id="deadzoneSlider" type="range"
     min="0" max="1" step="0.02" value="0.12">
 
-  <label for="sensitivitySlider">
-    감도: <span id="sensitivityValue">3.0</span>배
+  <label for="sensitivityXSlider">
+    좌우 감도 (X축): <span id="sensitivityXValue">3.0</span>배
   </label>
-  <input id="sensitivitySlider" type="range"
+  <input id="sensitivityXSlider" type="range"
     min="0.5" max="10" step="0.5" value="3">
+
+  <label for="sensitivityYSlider">
+    상하 감도 (Y축): <span id="sensitivityYValue">6.0</span>배
+  </label>
+  <input id="sensitivityYSlider" type="range"
+    min="0.5" max="10" step="0.5" value="6">
+
+  <p>좌우·상하 감도를 각각 조절할 수 있습니다. 설정은 이 기기에 저장됩니다.</p>
 
   <label for="smoothingSlider">
     스무딩: <span id="smoothingValue">25</span>%
@@ -147,8 +155,42 @@ const virtualArea = $("virtualArea");
 const virtualCursor = $("virtualCursor");
 
 let deadzone = 0.12;
-let sensitivity = 3;
+let sensitivityX = 3;
+let sensitivityY = 6;
 let smoothing = 0.25;
+
+// 감도 설정은 나중에 B가 제작하는 설정 메뉴에서도 사용할 수 있습니다.
+const SENSITIVITY_STORAGE_KEY = "iphone-mouse-axis-sensitivity-v1";
+
+function loadSensitivitySettings() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(SENSITIVITY_STORAGE_KEY));
+    if (!saved || typeof saved !== "object") return;
+
+    if (Number.isFinite(saved.x) && saved.x >= 0.5 && saved.x <= 10) {
+      sensitivityX = saved.x;
+    }
+    if (Number.isFinite(saved.y) && saved.y >= 0.5 && saved.y <= 10) {
+      sensitivityY = saved.y;
+    }
+  } catch (error) {
+    // 저장소를 사용할 수 없는 환경에서도 추적 기능은 계속 실행
+    console.warn("감도 설정 불러오기 실패:", error);
+  }
+}
+
+function saveSensitivitySettings() {
+  try {
+    localStorage.setItem(
+      SENSITIVITY_STORAGE_KEY,
+      JSON.stringify({ x: sensitivityX, y: sensitivityY })
+    );
+  } catch (error) {
+    console.warn("감도 설정 저장 실패:", error);
+  }
+}
+
+loadSensitivitySettings();
 
 let smoothDx = 0;
 let smoothDy = 0;
@@ -170,12 +212,29 @@ $("deadzoneSlider").addEventListener("input", (e) => {
     deadzone.toFixed(2);
 });
 
-$("sensitivitySlider").addEventListener("input", (e) => {
-  sensitivity = Number(e.target.value);
+const sensitivityXSlider = $("sensitivityXSlider");
+const sensitivityYSlider = $("sensitivityYSlider");
 
-  $("sensitivityValue").textContent =
-    sensitivity.toFixed(1);
+function updateSensitivitySliders() {
+  sensitivityXSlider.value = String(sensitivityX);
+  sensitivityYSlider.value = String(sensitivityY);
+  $("sensitivityXValue").textContent = sensitivityX.toFixed(1);
+  $("sensitivityYValue").textContent = sensitivityY.toFixed(1);
+}
+
+sensitivityXSlider.addEventListener("input", (e) => {
+  sensitivityX = Number(e.target.value);
+  $("sensitivityXValue").textContent = sensitivityX.toFixed(1);
+  saveSensitivitySettings();
 });
+
+sensitivityYSlider.addEventListener("input", (e) => {
+  sensitivityY = Number(e.target.value);
+  $("sensitivityYValue").textContent = sensitivityY.toFixed(1);
+  saveSensitivitySettings();
+});
+
+updateSensitivitySliders();
 
 $("smoothingSlider").addEventListener("input", (e) => {
   smoothing = Number(e.target.value) / 100;
@@ -541,8 +600,8 @@ function correction(rawDx, rawDy) {
       (1 - smoothing) * dy;
 
   return {
-    dx: smoothDx * sensitivity,
-    dy: smoothDy * sensitivity
+    dx: smoothDx * sensitivityX,
+    dy: smoothDy * sensitivityY
   };
 }
 
@@ -847,7 +906,8 @@ function trackMotion(timestamp) {
       // 위쪽: dy 음수
       // 아래쪽: dy 양수
 
-      const corrected = correction(rawDx, rawDy);  sendMouseMove(corrected.dx, corrected.dy);
+      const corrected = correction(rawDx, rawDy);
+      sendMouseMove(corrected.dx, corrected.dy);
 
 
       rawMovementText.textContent =
