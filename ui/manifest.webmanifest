@@ -1,0 +1,10 @@
+{
+  "name": "mouse.",
+  "short_name": "mouse.",
+  "lang": "ko",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#e5e9ed",
+  "theme_color": "#e5e9ed"
+}

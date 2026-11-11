@@ -1,0 +1,110 @@
+#mouse-fullscreen-flow { color-scheme:light dark; font-family:Inter,"Segoe UI","Malgun Gothic",sans-serif; }
+  #mouse-fullscreen-flow * { box-sizing:border-box; }
+  #mouse-fullscreen-flow .ff-stage { display:flex; justify-content:center; padding:20px 0; }
+  #mouse-fullscreen-flow .ff-device { --ff-bg:light-dark(#f3f4f5,#181c22); --ff-ink:light-dark(#25313b,#e7ecf2); --ff-muted:light-dark(#707c87,#a1aab5); --ff-line:light-dark(#d9dfe4,#3e4652); --ff-button:light-dark(#fcfcfc,#333d49); --ff-bottom:light-dark(#ccd3da,#2b333f); --ff-highlight:light-dark(#ffffff,#526070); --ff-palm:light-dark(#e5e9ed,#354150); --ff-panel:light-dark(#f7f8fa,#272e39); --ff-accent:#477e6a; --ff-shadow:light-dark(#34485c28,#00000055); position:relative; width:min(100%,354px); height:640px; border-radius:30px; background:var(--ff-bg); color:var(--ff-ink); overflow:hidden; border:1px solid var(--ff-line); box-shadow:0 14px 40px var(--ff-shadow); }
+  #mouse-fullscreen-flow button { font-family:inherit; -webkit-tap-highlight-color:transparent; }
+  #mouse-fullscreen-flow [hidden] { display:none!important; }
+  #mouse-fullscreen-flow button:focus-visible { outline:3px solid var(--ff-accent); outline-offset:-5px; }
+  #mouse-fullscreen-flow .ff-connect { display:flex; flex-direction:column; height:100%; padding:26px; }
+  #mouse-fullscreen-flow header { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  #mouse-fullscreen-flow .ff-logo { font-size:23px; font-weight:500; letter-spacing:-1.2px; }
+  #mouse-fullscreen-flow .ff-preview { font-size:11px; letter-spacing:1px; color:var(--ff-muted); }
+  #mouse-fullscreen-flow .ff-connection-hero { display:flex; flex-direction:column; align-items:center; gap:27px; padding:83px 0 57px; }
+  #mouse-fullscreen-flow .ff-connection-symbol { display:grid; place-items:center; width:94px; height:116px; color:var(--ff-accent); }
+  #mouse-fullscreen-flow .ff-connection-symbol svg { width:62px; height:78px; stroke-width:1; }
+  #mouse-fullscreen-flow h2 { margin:0; font-size:22px; line-height:1.3; font-weight:500; letter-spacing:-.8px; }
+  #mouse-fullscreen-flow .ff-transports { display:flex; flex-direction:column; gap:12px; }
+  #mouse-fullscreen-flow .ff-transport { display:flex; align-items:center; gap:12px; border:1px solid var(--ff-line); background:var(--ff-button); border-radius:17px; color:var(--ff-ink); padding:18px; font-size:14px; font-weight:500; }
+  #mouse-fullscreen-flow .ff-transport svg { width:20px; height:20px; }
+  #mouse-fullscreen-flow .ff-transport svg:last-child { margin-left:auto; width:15px; height:15px; color:var(--ff-muted); }
+  #mouse-fullscreen-flow .ff-transport:active { background:var(--ff-palm); }
+  #mouse-fullscreen-flow .ff-connection-footer { margin-top:auto; padding-top:20px; display:flex; flex-direction:column; align-items:center; gap:25px; }
+  #mouse-fullscreen-flow .ff-connect-status { font-size:11px; color:var(--ff-muted); text-align:center; min-height:17px; }
+  #mouse-fullscreen-flow .ff-home { width:86px; height:4px; border-radius:4px; background:var(--ff-ink); opacity:.65; }
+  #mouse-fullscreen-flow .ff-mouse { height:100%; position:relative; isolation:isolate; touch-action:none; }
+  #mouse-fullscreen-flow .ff-shell { position:absolute; inset:0; border-radius:30px; background:linear-gradient(100deg,var(--ff-bottom),var(--ff-palm) 35%,var(--ff-highlight) 54%,var(--ff-palm) 70%,var(--ff-bottom)); box-shadow:inset 2px 1px 7px var(--ff-highlight),inset -3px -5px 14px var(--ff-shadow); }
+  #mouse-fullscreen-flow .ff-click-zones { display:grid; grid-template-columns:minmax(0,1fr) 64px minmax(0,1fr); gap:2px; height:53%; background:var(--ff-line); border-bottom:2px solid var(--ff-line); border-radius:0 0 46% 46% / 0 0 11% 11%; overflow:hidden; }
+  #mouse-fullscreen-flow .ff-click { border:0; background:linear-gradient(100deg,var(--ff-highlight),var(--ff-button) 33%,var(--ff-bottom)); box-shadow:inset 2px 2px 8px var(--ff-highlight); touch-action:none; }
+  #mouse-fullscreen-flow .ff-right { background:linear-gradient(260deg,var(--ff-highlight),var(--ff-button) 33%,var(--ff-bottom)); }
+  #mouse-fullscreen-flow .ff-click:active,#mouse-fullscreen-flow .ff-click.ff-pressed { background:color-mix(in srgb,var(--ff-accent) 21%,var(--ff-button)); box-shadow:inset 0 5px 16px var(--ff-shadow); }
+  #mouse-fullscreen-flow .ff-wheel-zone { position:relative; display:flex; justify-content:center; padding-top:76px; background:linear-gradient(90deg,var(--ff-bottom),var(--ff-palm) 50%,var(--ff-bottom)); }
+  #mouse-fullscreen-flow .ff-wheel { width:30px; height:102px; border-radius:14px; background:repeating-linear-gradient(0deg,light-dark(#65717e,#647487) 0 2px,light-dark(#414b57,#2e3845) 3px 5px); background-position-y:var(--ff-offset,0px); box-shadow:inset 5px 0 7px #00000070,inset -4px 0 7px #00000070,0 0 0 4px light-dark(#a8b3c0,#161f2b),0 5px 8px #00000025; }
+  #mouse-fullscreen-flow .ff-wheel-input { position:absolute; inset:0; margin:0; width:100%; height:100%; opacity:0; writing-mode:vertical-lr; direction:rtl; touch-action:none; }
+  #mouse-fullscreen-flow .ff-wheel-zone:focus-within { box-shadow:inset 0 0 0 2px var(--ff-accent); }
+  #mouse-fullscreen-flow .ff-body { display:block; height:47%; width:100%; padding:0; border:0; background:transparent; touch-action:none; }
+  #mouse-fullscreen-flow .ff-power { position:absolute; z-index:4; bottom:36px; left:50%; transform:translateX(-50%); border:1px solid light-dark(#bbc5ce,#536171); width:50px; height:50px; border-radius:50%; background:var(--ff-palm); color:var(--ff-accent); box-shadow:inset 0 2px 4px var(--ff-highlight),0 3px 5px var(--ff-shadow); display:flex; align-items:center; justify-content:center; }
+  #mouse-fullscreen-flow .ff-power svg { width:20px; height:20px; }
+  #mouse-fullscreen-flow .ff-power>span { position:absolute; bottom:-12px; height:4px; width:4px; border-radius:50%; background:var(--ff-accent); }
+  #mouse-fullscreen-flow .ff-mouse.ff-off .ff-power { color:var(--ff-muted); }
+  #mouse-fullscreen-flow .ff-mouse.ff-off .ff-power>span { background:var(--ff-muted); }
+  #mouse-fullscreen-flow .ff-mouse.ff-off .ff-click-zones { filter:saturate(0); opacity:.57; }
+  #mouse-fullscreen-flow .ff-settings-layer { position:absolute; inset:0; z-index:3; }
+  #mouse-fullscreen-flow .ff-dismiss { position:absolute; inset:0; width:100%; height:100%; border:0; background:light-dark(#47576912,#00000022); }
+  #mouse-fullscreen-flow .ff-settings { position:absolute; left:17px; right:17px; bottom:114px; border:1px solid var(--ff-line); padding:16px 18px 20px; border-radius:24px; background:var(--ff-panel); box-shadow:0 12px 35px var(--ff-shadow); }
+  #mouse-fullscreen-flow .ff-settings-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:17px; color:var(--ff-muted); }
+  #mouse-fullscreen-flow .ff-settings-top>svg { width:17px; height:17px; }
+  #mouse-fullscreen-flow .ff-small { display:grid; place-items:center; width:36px; height:36px; border:0; border-radius:10px; color:var(--ff-muted); background:var(--ff-palm); }
+  #mouse-fullscreen-flow .ff-small svg { width:16px; height:16px; }
+  #mouse-fullscreen-flow .ff-slider-row { display:flex; align-items:center; gap:15px; margin-top:24px; color:var(--ff-ink); }
+  #mouse-fullscreen-flow .ff-slider-row>svg { width:22px; height:22px; flex-shrink:0; color:var(--ff-muted); }
+  #mouse-fullscreen-flow .ff-slider-row input { width:100%; min-width:0; accent-color:var(--ff-accent); }
+  #mouse-fullscreen-flow .ff-slider-row output { flex-shrink:0; min-width:35px; text-align:right; font-size:12px; font-variant-numeric:tabular-nums; }
+  #mouse-fullscreen-flow .ff-switches { display:flex; gap:25px; justify-content:space-between; border-top:1px solid var(--ff-line); padding-top:22px; margin-top:25px; }
+  #mouse-fullscreen-flow .ff-option { display:flex; align-items:center; justify-content:space-between; gap:14px; position:relative; flex:1; }
+  #mouse-fullscreen-flow .ff-option>svg { width:21px; height:21px; color:var(--ff-muted); }
+  #mouse-fullscreen-flow .ff-option input { position:absolute; inset:0; opacity:0; width:100%; height:100%; margin:0; }
+  #mouse-fullscreen-flow .ff-switch { width:37px; height:22px; border-radius:20px; background:var(--ff-bottom); padding:3px; pointer-events:none; }
+  #mouse-fullscreen-flow .ff-switch:before { content:''; width:16px; height:16px; display:block; background:#ffffff; border-radius:50%; box-shadow:0 1px 3px #00000020; }
+  #mouse-fullscreen-flow .ff-option input:checked+.ff-switch { background:var(--ff-accent); }
+  #mouse-fullscreen-flow .ff-option input:checked+.ff-switch:before { transform:translateX(15px); }
+  #mouse-fullscreen-flow .ff-option:focus-within { outline:2px solid var(--ff-accent); outline-offset:5px; border-radius:5px; }
+  #mouse-fullscreen-flow .ff-help-button { display:flex; align-items:center; justify-content:center; gap:7px; min-height:36px; border:0; border-radius:11px; background:var(--ff-palm); color:var(--ff-ink); padding:7px 12px; font-size:12px; }
+  #mouse-fullscreen-flow .ff-help-button svg { width:18px; height:18px; }
+  #mouse-fullscreen-flow .ff-guide-layer { position:absolute; inset:0; }
+  #mouse-fullscreen-flow .ff-guide-layer:before { content:''; position:absolute; inset:0; z-index:6; background:light-dark(#26384955,#00000070); }
+  #mouse-fullscreen-flow .ff-guide { position:absolute; z-index:8; left:16px; right:16px; bottom:112px; padding:18px; border:1px solid var(--ff-line); border-radius:22px; background:var(--ff-panel); color:var(--ff-ink); box-shadow:0 12px 35px var(--ff-shadow); }
+  #mouse-fullscreen-flow .ff-guide-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:13px; }
+  #mouse-fullscreen-flow .ff-guide-count { font-size:11px; color:var(--ff-muted); font-variant-numeric:tabular-nums; }
+  #mouse-fullscreen-flow .ff-guide-skip { padding:7px 0 7px 8px; border:0; background:transparent; color:var(--ff-muted); font-size:11px; }
+  #mouse-fullscreen-flow h3 { margin:0; font-size:18px; line-height:1.4; font-weight:500; letter-spacing:-.5px; }
+  #mouse-fullscreen-flow .ff-guide p { margin:10px 0 0; font-size:13px; line-height:1.65; word-break:keep-all; }
+  #mouse-fullscreen-flow .ff-guide .ff-help-reminder { margin-top:13px; font-size:11px; color:var(--ff-muted); }
+  #mouse-fullscreen-flow .ff-guide-actions { display:flex; gap:10px; justify-content:space-between; margin-top:18px; }
+  #mouse-fullscreen-flow .ff-guide-next,#mouse-fullscreen-flow .ff-guide-previous { display:flex; align-items:center; justify-content:center; gap:8px; min-height:40px; border:0; border-radius:12px; font-size:12px; padding:10px 15px; }
+  #mouse-fullscreen-flow .ff-guide-next { background:var(--ff-accent); color:#ffffff; }
+  #mouse-fullscreen-flow .ff-guide-previous { background:var(--ff-palm); color:var(--ff-ink); }
+  #mouse-fullscreen-flow .ff-guide-previous:disabled { opacity:.4; }
+  #mouse-fullscreen-flow .ff-guide-actions svg,#mouse-fullscreen-flow .ff-replay svg { width:15px; height:15px; }
+  #mouse-fullscreen-flow .ff-tour-target { outline:3px solid var(--ff-accent); outline-offset:-6px; pointer-events:none; }
+  #mouse-fullscreen-flow .ff-click.ff-tour-target,#mouse-fullscreen-flow .ff-body.ff-tour-target,#mouse-fullscreen-flow .ff-wheel-zone.ff-tour-target { position:relative; z-index:7; }
+  #mouse-fullscreen-flow .ff-power.ff-tour-target { z-index:7; }
+  #mouse-fullscreen-flow .ff-left.ff-dragging { background:color-mix(in srgb,var(--ff-accent) 35%,var(--ff-button)); box-shadow:inset 0 0 0 3px var(--ff-accent); }
+  #mouse-fullscreen-flow .ff-help-layer { position:absolute; inset:0; z-index:9; background:light-dark(#26384955,#00000070); display:flex; align-items:center; padding:14px; }
+  #mouse-fullscreen-flow .ff-help-panel { background:var(--ff-panel); border:1px solid var(--ff-line); padding:19px; width:100%; border-radius:24px; color:var(--ff-ink); box-shadow:0 12px 35px var(--ff-shadow); }
+  #mouse-fullscreen-flow .ff-help-header { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  #mouse-fullscreen-flow .ff-help-list { margin:16px 0 20px; }
+  #mouse-fullscreen-flow .ff-help-list>div+div { margin-top:13px; }
+  #mouse-fullscreen-flow .ff-help-list dt { font-size:12px; font-weight:500; }
+  #mouse-fullscreen-flow .ff-help-list dd { margin:4px 0 0; font-size:12px; line-height:1.6; color:var(--ff-muted); word-break:keep-all; }
+  #mouse-fullscreen-flow .ff-replay { width:100%; }
+  #mouse-fullscreen-flow .ff-live { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+  @media(pointer:coarse) { #mouse-fullscreen-flow .ff-small { width:44px; height:44px; } #mouse-fullscreen-flow .ff-option { min-height:44px; } }
+  @media(max-width:360px) { #mouse-fullscreen-flow .ff-connect { padding:22px; } #mouse-fullscreen-flow .ff-preview { font-size:11px; letter-spacing:0; } #mouse-fullscreen-flow .ff-settings { padding-left:14px; padding-right:14px; } #mouse-fullscreen-flow .ff-slider-row { gap:9px; } }
+html,body{margin:0;width:100%;height:100%;overflow:hidden;overscroll-behavior:none;background:#e5e9ed;}
+#mouse-fullscreen-flow{height:100%;width:100%;}
+#mouse-fullscreen-flow .ff-stage{padding:0;width:100%;height:100%;display:block;}
+#mouse-fullscreen-flow .ff-device{width:100%;height:100%;height:100dvh;border:0;border-radius:0;box-shadow:none;}
+#mouse-fullscreen-flow .ff-shell{border-radius:0;}
+#mouse-fullscreen-flow .ff-connect{padding:calc(22px + env(safe-area-inset-top)) 26px calc(20px + env(safe-area-inset-bottom));overflow:auto;}
+#mouse-fullscreen-flow .ff-connection-hero{padding:35px 0 30px;gap:20px;flex-shrink:0;}
+#mouse-fullscreen-flow .ff-connection-symbol{height:84px;}
+#mouse-fullscreen-flow .ff-power{bottom:calc(30px + env(safe-area-inset-bottom));}
+#mouse-fullscreen-flow .ff-settings{bottom:calc(105px + env(safe-area-inset-bottom));}
+#mouse-fullscreen-flow .ff-demo{border:0;background:transparent;color:var(--ff-muted);font-size:12px;min-height:36px;padding:7px;}
+#mouse-fullscreen-flow .ff-connection-footer{gap:13px;}
+#mouse-fullscreen-flow .ff-help-panel{max-height:calc(100% - 12px);overflow:auto;}
+#mouse-fullscreen-flow .ff-guide{max-height:calc(100% - 142px);overflow:auto;}
+#mouse-fullscreen-flow .ff-help-button,#mouse-fullscreen-flow .ff-small{min-height:44px;}
+#mouse-fullscreen-flow .ff-option{min-height:44px;}
+@media(min-width:760px){#mouse-fullscreen-flow .ff-connect{max-width:460px;margin:0 auto;}#mouse-fullscreen-flow .ff-settings{max-width:380px;left:50%;right:auto;width:calc(100% - 34px);transform:translateX(-50%);}#mouse-fullscreen-flow .ff-help-panel{max-width:420px;}#mouse-fullscreen-flow .ff-help-layer{justify-content:center;}#mouse-fullscreen-flow .ff-guide{max-width:400px;left:50%;right:auto;width:calc(100% - 32px);transform:translateX(-50%);}}
+@media(max-height:560px){#mouse-fullscreen-flow .ff-connection-hero{padding:18px 0;gap:8px;}#mouse-fullscreen-flow .ff-connection-symbol{height:50px;}#mouse-fullscreen-flow .ff-connection-symbol svg{height:48px;}#mouse-fullscreen-flow .ff-transport{padding:12px;}#mouse-fullscreen-flow .ff-guide{bottom:18px;max-height:calc(100% - 36px);}#mouse-fullscreen-flow .ff-settings{bottom:85px;max-height:calc(100% - 100px);overflow:auto;}#mouse-fullscreen-flow .ff-wheel-zone{padding-top:35px;}#mouse-fullscreen-flow .ff-wheel{height:70px;}}

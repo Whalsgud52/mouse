@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#e5e9ed">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>mouse.</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="style.css">
+  <script defer src="vendor/lucide.min.js"></script>
+  <script defer src="ui.js"></script>
+</head>
+<body>
+<div id="mouse-fullscreen-flow" aria-label="전체 화면 마우스 연결 및 설정 디자인">
+  <div class="ff-stage">
+    <div class="ff-device" aria-label="전체 화면 마우스">
+      <section class="ff-connect" aria-label="연결 화면">
+        <header><span class="ff-logo">mouse.</span><span class="ff-preview" aria-hidden="true"></span></header>
+        <div class="ff-connection-hero"><div class="ff-connection-symbol"><i data-lucide="bluetooth" aria-hidden="true"></i></div><h2>PC와 연결하기</h2></div>
+        <div class="ff-transports">
+          <button class="ff-transport cursor-interaction" data-transport="Bluetooth"><i data-lucide="bluetooth" aria-hidden="true"></i><span>Bluetooth</span><i data-lucide="arrow-up-right" aria-hidden="true"></i></button>
+          <button class="ff-transport cursor-interaction" data-transport="USB-C"><i data-lucide="cable" aria-hidden="true"></i><span>USB-C</span><i data-lucide="arrow-up-right" aria-hidden="true"></i></button>
+        </div>
+        <div class="ff-connection-footer"><button class="ff-demo cursor-interaction" data-demo>화면만 둘러보기</button><span class="ff-connect-status" aria-live="polite">연결 방식을 선택하세요</span><span class="ff-home"></span></div>
+      </section>
+      <section class="ff-mouse" aria-label="마우스 조작 화면" hidden>
+        <div class="ff-shell">
+          <div class="ff-click-zones">
+            <button class="ff-click ff-left cursor-interaction" data-side="left" aria-label="좌클릭 · 누른 채 움직이면 드래그"></button>
+            <div class="ff-wheel-zone"><div class="ff-wheel" aria-hidden="true"></div><input class="ff-wheel-input cursor-interaction" aria-label="휠 스크롤" type="range" min="-100" max="100" value="0"></div>
+            <button class="ff-click ff-right cursor-interaction" data-side="right" aria-label="우클릭"></button>
+          </div>
+          <button class="ff-body cursor-interaction" aria-label="몸통 두 번 탭으로 설정 열기" aria-expanded="false" aria-controls="ff-settings"></button>
+        </div>
+        <div class="ff-settings-layer" hidden>
+          <button class="ff-dismiss cursor-interaction" aria-label="설정 바깥을 두 번 탭해서 닫기"></button>
+          <section class="ff-settings" id="ff-settings" aria-label="감도와 햅틱 설정" role="dialog" aria-modal="true">
+            <div class="ff-settings-top"><button class="ff-small cursor-interaction" data-back aria-label="연결 화면으로 돌아가기"><i data-lucide="arrow-left" aria-hidden="true"></i></button><i class="ff-current-transport" data-lucide="bluetooth" aria-hidden="true"></i><button class="ff-small cursor-interaction" data-close aria-label="설정 닫기"><i data-lucide="x" aria-hidden="true"></i></button></div>
+            <label class="ff-slider-row"><i data-lucide="move-horizontal" aria-hidden="true"></i><input type="range" min="0.5" max="10" step="0.5" value="3" data-axis="x" aria-label="X축 감도"><output>3.0×</output></label>
+            <label class="ff-slider-row"><i data-lucide="move-vertical" aria-hidden="true"></i><input type="range" min="0.5" max="10" step="0.5" value="6" data-axis="y" aria-label="Y축 감도"><output>6.0×</output></label>
+            <div class="ff-switches"><label class="ff-option"><i data-lucide="vibrate" aria-hidden="true"></i><input type="checkbox" data-haptic role="switch" aria-label="휠 햅틱" checked><span class="ff-switch" aria-hidden="true"></span></label><button class="ff-help-button cursor-interaction" data-help aria-label="도움말 열기"><i data-lucide="circle-help" aria-hidden="true"></i><span>도움말</span></button></div>
+          </section>
+        </div>
+        <button class="ff-power cursor-interaction" aria-label="마우스 끄기" aria-pressed="true"><i data-lucide="power" aria-hidden="true"></i><span aria-hidden="true"></span></button>
+        <div class="ff-guide-layer" hidden>
+          <section class="ff-guide" role="dialog" aria-modal="true" aria-labelledby="ff-guide-title" aria-describedby="ff-guide-description">
+            <div class="ff-guide-top"><span class="ff-guide-count">1 / 5</span><button class="ff-guide-skip cursor-interaction" data-guide-skip>건너뛰기</button></div>
+            <h3 id="ff-guide-title">좌클릭과 드래그</h3>
+            <p id="ff-guide-description">가볍게 탭하면 좌클릭. 꾹 누른 채 휴대폰을 움직이면 드래그하고, 손을 떼면 놓아요.</p>
+            <p class="ff-help-reminder">사용법은 설정의 ? 도움말에서 다시 볼 수 있어요.</p>
+            <div class="ff-guide-actions"><button class="ff-guide-previous cursor-interaction" data-guide-previous aria-label="이전 안내" disabled><i data-lucide="arrow-left" aria-hidden="true"></i></button><button class="ff-guide-next cursor-interaction" data-guide-next>다음 <i data-lucide="arrow-right" aria-hidden="true"></i></button></div>
+          </section>
+        </div>
+        <div class="ff-help-layer" hidden>
+          <section class="ff-help-panel" role="dialog" aria-modal="true" aria-labelledby="ff-help-title">
+            <div class="ff-help-header"><h3 id="ff-help-title">사용법</h3><button class="ff-small cursor-interaction" data-help-close aria-label="도움말 닫기"><i data-lucide="x" aria-hidden="true"></i></button></div>
+            <dl class="ff-help-list">
+              <div><dt>좌클릭 · 우클릭</dt><dd>왼쪽 또는 오른쪽 영역을 가볍게 탭해요.</dd></div>
+              <div><dt>드래그</dt><dd>왼쪽을 꾹 누른 채 휴대폰을 움직여요. 손을 떼면 놓아요.</dd></div>
+              <div><dt>휠 · 햅틱</dt><dd>가운데 휠을 위아래로 밀어요. 설정의 진동 아이콘으로 햅틱을 켜고 꺼요.</dd></div>
+              <div><dt>전원</dt><dd>아래 ⏻ 버튼으로 마우스 조작을 켜고 꺼요.</dd></div>
+              <div><dt>설정 열기 · 닫기</dt><dd>몸통을 두 번 탭하면 열려요. 설정 바깥을 두 번 탭하면 닫혀요.</dd></div>
+              <div><dt>좌우 · 상하 감도</dt><dd>↔는 좌우, ↕는 상하 감도예요. 값을 높이면 커서가 더 크게 움직여요.</dd></div>
+            </dl>
+            <button class="ff-guide-next ff-replay cursor-interaction" data-guide-replay>처음 안내 다시 보기 <i data-lucide="rotate-ccw" aria-hidden="true"></i></button>
+          </section>
+        </div>
+      </section>
+    </div>
+  </div>
+  <span class="ff-live" aria-live="polite"></span>
+</div>
+</body>
+</html>
