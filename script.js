@@ -3,24 +3,178 @@ const video = document.getElementById("camera");
 const startBtn = document.getElementById("startBtn");
 const statusText = document.getElementById("status");
 
-// 이동량 표시 화면
-const display = document.createElement("div");
+// ========================================
+// 1. 이동량 표시 및 설정 UI
+// ========================================
 
-display.innerHTML = `
+const panel = document.createElement("div");
+
+panel.innerHTML = `
     <h3>카메라 이동량</h3>
-    <p id="movement">dx: 0.00 | dy: 0.00</p>
+
+    <p id="rawMovement">
+        원본 dx: 0.00 | dy: 0.00
+    </p>
+
+    <p id="movement">
+        보정 dx: 0.00 | dy: 0.00
+    </p>
+
     <p id="points">추적 특징점: 0</p>
     <p id="opencvStatus">OpenCV 로딩 중...</p>
+
+    <hr>
+
+    <h3>마우스 이동 설정</h3>
+
+    <label for="deadzoneSlider">
+        데드존: <span id="deadzoneValue">0.12</span>
+    </label>
+    <input
+        type="range"
+        id="deadzoneSlider"
+        min="0"
+        max="1"
+        step="0.02"
+        value="0.12"
+    >
+
+    <br><br>
+
+    <label for="sensitivitySlider">
+        마우스 감도:
+        <span id="sensitivityValue">3.0</span>배
+    </label>
+    <input
+        type="range"
+        id="sensitivitySlider"
+        min="0.5"
+        max="10"
+        step="0.5"
+        value="3"
+    >
+
+    <br><br>
+
+    <label for="smoothingSlider">
+        스무딩:
+        <span id="smoothingValue">25</span>%
+    </label>
+    <input
+        type="range"
+        id="smoothingSlider"
+        min="0"
+        max="85"
+        step="5"
+        value="25"
+    >
+
+    <hr>
 `;
 
-video.before(display);
+video.before(panel);
 
-const movementText = document.getElementById("movement");
-const pointsText = document.getElementById("points");
-const opencvStatus = document.getElementById("opencvStatus");
+// 설정 UI 스타일
+const style = document.createElement("style");
 
-// 영상 분석용 캔버스
+style.textContent = `
+    #deadzoneSlider,
+    #sensitivitySlider,
+    #smoothingSlider {
+        width: 90%;
+        max-width: 350px;
+        display: block;
+        margin: 12px auto;
+        accent-color: #2563eb;
+    }
+
+    #movement {
+        font-size: 20px;
+        font-weight: bold;
+        color: #2563eb;
+    }
+
+    #rawMovement {
+        font-size: 15px;
+        color: #555;
+    }
+
+    #opencvStatus {
+        font-weight: bold;
+    }
+
+    #points {
+        font-size: 14px;
+    }
+`;
+
+document.head.appendChild(style);
+
+// 화면 요소
+const rawMovementText =
+    document.getElementById("rawMovement");
+
+const movementText =
+    document.getElementById("movement");
+
+const pointsText =
+    document.getElementById("points");
+
+const opencvStatus =
+    document.getElementById("opencvStatus");
+
+// 슬라이더
+const deadzoneSlider =
+    document.getElementById("deadzoneSlider");
+
+const sensitivitySlider =
+    document.getElementById("sensitivitySlider");
+
+const smoothingSlider =
+    document.getElementById("smoothingSlider");
+
+// 설정값
+let deadzone = 0.12;
+let sensitivity = 3.0;
+let smoothing = 0.25;
+
+// 스무딩에 사용할 이전 이동량
+let smoothDx = 0;
+let smoothDy = 0;
+
+// ========================================
+// 2. 슬라이더 이벤트
+// ========================================
+
+deadzoneSlider.addEventListener("input", () => {
+    deadzone = Number(deadzoneSlider.value);
+
+    document.getElementById("deadzoneValue")
+        .textContent = deadzone.toFixed(2);
+});
+
+sensitivitySlider.addEventListener("input", () => {
+    sensitivity = Number(sensitivitySlider.value);
+
+    document.getElementById("sensitivityValue")
+        .textContent = sensitivity.toFixed(1);
+});
+
+smoothingSlider.addEventListener("input", () => {
+    const value = Number(smoothingSlider.value);
+
+    smoothing = value / 100;
+
+    document.getElementById("smoothingValue")
+        .textContent = value;
+});
+
+// ========================================
+// 3. 영상 분석 준비
+// ========================================
+
 const canvas = document.createElement("canvas");
+
 canvas.width = 320;
 canvas.height = 240;
 
@@ -28,15 +182,16 @@ const ctx = canvas.getContext("2d", {
     willReadFrequently: true
 });
 
-// 전역 변수
 let cvLib = null;
 let previousGray = null;
 let tracking = false;
 let lastTime = 0;
+
 let promiseAttached = false;
+let cvPollTimer = null;
 
 // ========================================
-// 1. OpenCV 초기화
+// 4. OpenCV 초기화
 // ========================================
 
 function setOpenCVReady(module) {
@@ -44,11 +199,20 @@ function setOpenCVReady(module) {
         return false;
     }
 
+    if (cvLib) return true;
+
     cvLib = module;
+
     opencvStatus.textContent = "OpenCV 준비 완료";
     opencvStatus.style.color = "green";
 
+    if (cvPollTimer !== null) {
+        clearInterval(cvPollTimer);
+        cvPollTimer = null;
+    }
+
     console.log("OpenCV 초기화 성공");
+
     return true;
 }
 
@@ -57,12 +221,11 @@ function checkOpenCV() {
 
     const candidate = window.cv;
 
-    // 이미 초기화된 OpenCV
     if (setOpenCVReady(candidate)) {
         return;
     }
 
-    // Promise 방식의 OpenCV
+    // Promise 방식 지원
     if (
         candidate &&
         typeof candidate.then === "function" &&
@@ -77,13 +240,14 @@ function checkOpenCV() {
             }
         }).catch((error) => {
             opencvStatus.textContent =
-                "OpenCV 초기화 오류: " + error.message;
+                "OpenCV 초기화 오류";
+
             console.error(error);
         });
     }
 }
 
-// 일부 OpenCV 배포 방식에서 사용하는 콜백
+// 일부 OpenCV.js 버전에서 사용하는 초기화 콜백
 window.Module = {
     onRuntimeInitialized: function () {
         checkOpenCV();
@@ -99,54 +263,59 @@ library.onload = function () {
     checkOpenCV();
 
     if (!cvLib) {
-        opencvStatus.textContent = "OpenCV 초기화 중...";
-
-        // 초기화가 완료되었는지 주기적으로 확인
-        const interval = setInterval(() => {
-            checkOpenCV();
-
-            if (cvLib) {
-                clearInterval(interval);
-            }
-        }, 200);
-
-        // 초기화가 지나치게 오래 걸리면 안내
-        setTimeout(() => {
-            clearInterval(interval);
-
-            if (!cvLib) {
-                opencvStatus.textContent =
-                    "OpenCV 초기화 지연 또는 실패";
-                opencvStatus.style.color = "red";
-            }
-        }, 60000);
+        opencvStatus.textContent =
+            "OpenCV 초기화 중...";
     }
 };
 
 library.onerror = function () {
     opencvStatus.textContent =
-        "OpenCV 다운로드 실패. 인터넷 연결 확인";
+        "OpenCV 다운로드 실패";
+
     opencvStatus.style.color = "red";
 };
 
 document.head.appendChild(library);
 
+// 초기화 상태 확인
+cvPollTimer = setInterval(() => {
+    checkOpenCV();
+}, 200);
+
+// 60초 이상 초기화되지 않을 경우 오류 표시
+setTimeout(() => {
+    if (!cvLib) {
+        if (cvPollTimer !== null) {
+            clearInterval(cvPollTimer);
+            cvPollTimer = null;
+        }
+
+        opencvStatus.textContent =
+            "OpenCV 초기화 지연 또는 실패";
+
+        opencvStatus.style.color = "red";
+    }
+}, 60000);
+
 // ========================================
-// 2. iPhone 카메라 실행
+// 5. 전면 카메라 실행
 // ========================================
 
 async function startCamera() {
     try {
-        statusText.textContent = "카메라 연결 중...";
+        statusText.textContent =
+            "카메라 연결 중...";
 
         const stream =
             await navigator.mediaDevices.getUserMedia({
                 video: {
-                    //facingMode: { ideal: "environment" }, //후면카메라
-                    facingMode: { ideal: "user" }, //전면카메라
+                    // 전면 카메라 사용
+                    facingMode: { exact: "user" },
+
                     width: { ideal: 640 },
                     height: { ideal: 480 }
                 },
+
                 audio: false
             });
 
@@ -154,12 +323,25 @@ async function startCamera() {
 
         await video.play();
 
-        statusText.textContent = "카메라 실행 중";
+        statusText.textContent =
+            "전면 카메라 실행 중";
+
         statusText.style.color = "green";
 
         startBtn.disabled = true;
 
+        // 이전 데이터 초기화
+        if (previousGray !== null) {
+            previousGray.delete();
+            previousGray = null;
+        }
+
+        smoothDx = 0;
+        smoothDy = 0;
+        lastTime = 0;
+
         tracking = true;
+
         requestAnimationFrame(trackMotion);
 
     } catch (error) {
@@ -171,10 +353,9 @@ async function startCamera() {
 }
 
 // ========================================
-// 3. 중앙값 계산
+// 6. 중앙값 계산
 // ========================================
 
-// 잘못 추적된 일부 특징점의 영향을 줄이기 위해 사용
 function median(values) {
     if (values.length === 0) {
         return 0;
@@ -192,7 +373,55 @@ function median(values) {
 }
 
 // ========================================
-// 4. Optical Flow 이동량 계산
+// 7. 데드존 + 감도 + 스무딩
+// ========================================
+
+function applyMovementCorrection(rawDx, rawDy) {
+
+    // 1. 데드존 적용
+    let dx = rawDx;
+    let dy = rawDy;
+
+    if (Math.abs(dx) < deadzone) {
+        dx = 0;
+    }
+
+    if (Math.abs(dy) < deadzone) {
+        dy = 0;
+    }
+
+    // 2. 스무딩 적용
+    // 0% = 즉시 반영
+    // 높은 값 = 이전 이동량을 더 많이 반영
+
+    if (dx === 0) {
+        smoothDx = 0;
+    } else {
+        smoothDx =
+            smoothing * smoothDx +
+            (1 - smoothing) * dx;
+    }
+
+    if (dy === 0) {
+        smoothDy = 0;
+    } else {
+        smoothDy =
+            smoothing * smoothDy +
+            (1 - smoothing) * dy;
+    }
+
+    // 3. 마우스 감도 적용
+    const finalDx = smoothDx * sensitivity;
+    const finalDy = smoothDy * sensitivity;
+
+    return {
+        dx: finalDx,
+        dy: finalDy
+    };
+}
+
+// ========================================
+// 8. Optical Flow 이동 추적
 // ========================================
 
 function trackMotion(timestamp) {
@@ -200,12 +429,11 @@ function trackMotion(timestamp) {
 
     requestAnimationFrame(trackMotion);
 
-    // 약 10FPS로 영상 분석
+    // 약 10FPS로 분석
     if (timestamp - lastTime < 100) {
         return;
     }
 
-    // OpenCV 및 영상 준비 확인
     if (!cvLib || video.readyState < 2) {
         return;
     }
@@ -223,7 +451,7 @@ function trackMotion(timestamp) {
     let mask = null;
 
     try {
-        // 카메라 영상을 캔버스에 그리기
+        // 카메라 영상 캔버스에 복사
         ctx.drawImage(
             video,
             0,
@@ -233,9 +461,10 @@ function trackMotion(timestamp) {
         );
 
         src = cvLib.imread(canvas);
+
         gray = new cvLib.Mat();
 
-        // 컬러 영상을 흑백으로 변환
+        // 흑백 변환
         cvLib.cvtColor(
             src,
             gray,
@@ -250,7 +479,7 @@ function trackMotion(timestamp) {
             err = new cvLib.Mat();
             mask = new cvLib.Mat();
 
-            // 이전 프레임에서 특징점 탐색
+            // 특징점 탐색
             cvLib.goodFeaturesToTrack(
                 previousGray,
                 prevPts,
@@ -264,6 +493,7 @@ function trackMotion(timestamp) {
             const dyList = [];
 
             if (prevPts.rows > 0) {
+
                 // Lucas-Kanade Optical Flow
                 cvLib.calcOpticalFlowPyrLK(
                     previousGray,
@@ -282,8 +512,9 @@ function trackMotion(timestamp) {
                     )
                 );
 
-                // 정상적으로 추적된 특징점만 계산
+                // 특징점별 이동량 계산
                 for (let i = 0; i < prevPts.rows; i++) {
+
                     if (status.data[i] !== 1) {
                         continue;
                     }
@@ -313,14 +544,36 @@ function trackMotion(timestamp) {
                 }
             }
 
-            // 카메라 이동 방향을 추정
-            const dx = median(dxList);
-            const dy = -median(dyList);
+            // ========================================
+            // 9. 전면 카메라 이동 방향 보정
+            // ========================================
 
-            // 화면에 이동량 표시
+            // 이전 테스트 결과 기준
+            // 오른쪽 이동 -> dx 양수
+            // 왼쪽 이동 -> dx 음수
+            // 위쪽 이동 -> dy 음수
+            // 아래쪽 이동 -> dy 양수
+
+            const rawDx = median(dxList);
+            const rawDy = -median(dyList);
+
+            // 원본 이동량 출력
+            rawMovementText.textContent =
+                `원본 dx: ${rawDx.toFixed(2)} | ` +
+                `dy: ${rawDy.toFixed(2)}`;
+
+            // 데드존 + 스무딩 + 감도 조절
+            const corrected = applyMovementCorrection(
+                rawDx,
+                rawDy
+            );
+
+            // 보정된 이동량 출력
             movementText.textContent =
-                `dx: ${dx.toFixed(2)} | dy: ${dy.toFixed(2)}`;
+                `보정 dx: ${corrected.dx.toFixed(2)} | ` +
+                `dy: ${corrected.dy.toFixed(2)}`;
 
+            // 특징점 개수 표시
             pointsText.textContent =
                 `추적 특징점: ${dxList.length}`;
         }
@@ -330,11 +583,12 @@ function trackMotion(timestamp) {
             previousGray.delete();
         }
 
-        // 현재 프레임을 다음 비교에 사용
+        // 현재 프레임 저장
         previousGray = gray;
         gray = null;
 
     } catch (error) {
+
         tracking = false;
 
         statusText.textContent =
@@ -344,7 +598,13 @@ function trackMotion(timestamp) {
 
         console.error(error);
 
+        if (previousGray !== null) {
+            previousGray.delete();
+            previousGray = null;
+        }
+
     } finally {
+
         // OpenCV 메모리 해제
         if (src) src.delete();
         if (gray) gray.delete();
@@ -359,7 +619,7 @@ function trackMotion(timestamp) {
 }
 
 // ========================================
-// 5. 카메라 버튼 이벤트
+// 10. 카메라 버튼 이벤트
 // ========================================
 
 startBtn.addEventListener("click", startCamera);
