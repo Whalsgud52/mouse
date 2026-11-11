@@ -523,7 +523,7 @@ function trackMotion(timestamp) {
 
     // 약 10FPS로 분석
     if (
-        timestamp - lastTime < 100 ||
+        timestamp - lastTime < 50 ||
         !cvLib ||
         video.readyState < 2
     ) {
